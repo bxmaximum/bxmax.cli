@@ -599,7 +599,7 @@ php bitrix.php help search:reindex
 ### Предложения и идеи
 
 Если у вас есть идеи для новых команд или улучшений, пожалуйста:
-- Создайте issue в [разделе Issues](https://github.com/yourusername/bxmax.cli/issues) на GitHub
+- Создайте issue в [разделе Issues](https://github.com/bxmaximum/bxmax.cli/issues) на GitHub
 - Опишите вашу идею максимально детально
 - Приведите примеры использования, если возможно
 
@@ -612,7 +612,7 @@ php bitrix.php help search:reindex
 3. Внесите изменения и добавьте тесты, если возможно
 4. Закоммитьте изменения (`git commit -m 'feat: добавлена команда iblock:amazing-command'`)
 5. Запушьте в ветку (`git push origin feature/amazing-command`)
-6. Создайте [Pull Request](https://github.com/yourusername/bxmax.cli/pulls)
+6. Создайте [Pull Request](https://github.com/bxmaximum/bxmax.cli/pulls)
 
 #### Формат коммитов
 
@@ -634,5 +634,5 @@ MIT
 
 ## Автор
 
-Kirill Novozhilov
+[Kirill Novozhilov](https://t.me/kirk_novozhilov)
 
