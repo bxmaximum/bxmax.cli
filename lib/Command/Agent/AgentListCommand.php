@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Bxmax\Cli\Command\Agent;
 
-use Bitrix\Main\Agent\AgentTable;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -18,8 +17,10 @@ class AgentListCommand extends Command
     {
         $this->setName('agent:list')
             ->setDescription('Список агентов')
-            ->addOption('limit', 'l', InputOption::VALUE_OPTIONAL, 'Количество агентов', 20)
-            ->addOption('active', 'a', InputOption::VALUE_NONE, 'Только активные агенты');
+            ->addOption('limit', null, InputOption::VALUE_OPTIONAL, 'Ограничить количество выводимых агентов')
+            ->addOption('active', null, InputOption::VALUE_NONE, 'Показать только активные агенты')
+            ->addOption('inactive', null, InputOption::VALUE_NONE, 'Показать только неактивные агенты')
+            ->addOption('module', null, InputOption::VALUE_REQUIRED, 'Фильтр по модулю');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -28,28 +29,77 @@ class AgentListCommand extends Command
         
         $io->title('Список агентов');
 
-        $limit = (int)$input->getOption('limit');
+        $limit = $input->getOption('limit') ? (int)$input->getOption('limit') : null;
         $activeOnly = $input->getOption('active');
+        $inactiveOnly = $input->getOption('inactive');
+        $module = $input->getOption('module');
+        $verbosity = $output->getVerbosity();
+
+        // Проверка на конфликтующие опции
+        if ($activeOnly && $inactiveOnly) {
+            $io->error('Нельзя использовать --active и --inactive одновременно');
+            return self::FAILURE;
+        }
 
         $filter = [];
         if ($activeOnly) {
             $filter['ACTIVE'] = 'Y';
+        } elseif ($inactiveOnly) {
+            $filter['ACTIVE'] = 'N';
         }
 
-        $result = \CAgent::GetList(arFilter: $filter);
+        if ($module) {
+            $filter['MODULE_ID'] = $module;
+        }
+
+        $result = \CAgent::GetList(['NEXT_EXEC' => 'ASC'], $filter);
 
         $tableData = [];
         $count = 0;
 
         while ($agent = $result->Fetch()) {
-            $tableData[] = [
-                $agent['ID'],
-                mb_substr($agent['NAME'], 0, 50) . (mb_strlen($agent['NAME']) > 50 ? '...' : ''),
-                $agent['MODULE_ID'] ?? '',
-                $agent['ACTIVE'] === 'Y' ? 'Да' : 'Нет',
-                $agent['NEXT_EXEC'] ?? '',
-                $agent['AGENT_INTERVAL'] ?? '',
-            ];
+            if ($limit && $count >= $limit) {
+                break;
+            }
+
+            $nameLength = $verbosity >= OutputInterface::VERBOSITY_VERBOSE ? 100 : 50;
+            $name = mb_substr($agent['NAME'], 0, $nameLength) . (mb_strlen($agent['NAME']) > $nameLength ? '...' : '');
+
+            if ($verbosity >= OutputInterface::VERBOSITY_VERY_VERBOSE) {
+                // Очень подробный режим (-vv)
+                $tableData[] = [
+                    $agent['ID'],
+                    $name,
+                    $agent['MODULE_ID'] ?? '-',
+                    $agent['ACTIVE'] === 'Y' ? 'Да' : 'Нет',
+                    $agent['NEXT_EXEC'] ?? '-',
+                    $agent['AGENT_INTERVAL'] ?? '0',
+                    $agent['SORT'] ?? '100',
+                    $agent['LAST_EXEC'] ?? '-',
+                    $agent['USER_ID'] ?? '-',
+                ];
+            } elseif ($verbosity >= OutputInterface::VERBOSITY_VERBOSE) {
+                // Подробный режим (-v)
+                $tableData[] = [
+                    $agent['ID'],
+                    $name,
+                    $agent['MODULE_ID'] ?? '-',
+                    $agent['ACTIVE'] === 'Y' ? 'Да' : 'Нет',
+                    $agent['NEXT_EXEC'] ?? '-',
+                    $agent['AGENT_INTERVAL'] ?? '0',
+                    $agent['SORT'] ?? '100',
+                ];
+            } else {
+                // Обычный режим
+                $tableData[] = [
+                    $agent['ID'],
+                    $name,
+                    $agent['MODULE_ID'] ?? '-',
+                    $agent['ACTIVE'] === 'Y' ? 'Да' : 'Нет',
+                    $agent['NEXT_EXEC'] ?? '-',
+                    $agent['AGENT_INTERVAL'] ?? '0',
+                ];
+            }
             $count++;
         }
 
@@ -59,8 +109,16 @@ class AgentListCommand extends Command
         }
 
         $table = new Table($output);
-        $table->setHeaders(['ID', 'Название', 'Модуль', 'Активен', 'След. запуск', 'Интервал'])
-              ->setRows($tableData);
+        
+        if ($verbosity >= OutputInterface::VERBOSITY_VERY_VERBOSE) {
+            $table->setHeaders(['ID', 'Название', 'Модуль', 'Активен', 'След. запуск', 'Интервал (сек)', 'Приоритет', 'Последний запуск', 'Пользователь']);
+        } elseif ($verbosity >= OutputInterface::VERBOSITY_VERBOSE) {
+            $table->setHeaders(['ID', 'Название', 'Модуль', 'Активен', 'След. запуск', 'Интервал (сек)', 'Приоритет']);
+        } else {
+            $table->setHeaders(['ID', 'Название', 'Модуль', 'Активен', 'След. запуск', 'Интервал (сек)']);
+        }
+        
+        $table->setRows($tableData);
         $table->render();
 
         $io->success(sprintf('Показано агентов: %d', $count));

@@ -40,6 +40,12 @@ return [
 
                 // Database commands
                 \Bxmax\Cli\Command\Database\DbInfoCommand::class,
+
+                // Backup commands
+                \Bxmax\Cli\Command\Backup\BackupCreateCommand::class,
+                \Bxmax\Cli\Command\Backup\BackupCleanCommand::class,
+                \Bxmax\Cli\Command\Backup\BackupListCommand::class,
+                \Bxmax\Cli\Command\Backup\BackupRestoreCommand::class,
             ],
         ],
         'readonly' => true,

@@ -7,6 +7,8 @@ namespace Bxmax\Cli\Command\Iblock;
 use Bitrix\Main\Loader;
 use Bitrix\Iblock\IblockTable;
 use Bitrix\Iblock\PropertyIndex\Manager;
+use Bitrix\Main\LoaderException;
+use Bxmax\Cli\Helper\IblockHelper;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -24,16 +26,25 @@ class FacetIndexRebuildCommand extends Command
             ->addArgument(
                 'iblock-id',
                 InputArgument::OPTIONAL,
-                'ID инфоблока для пересоздания индекса (если не указан, обработаются все инфоблоки)'
+                'ID инфоблока для пересоздания индекса'
             )
             ->addOption(
                 'list',
                 'l',
                 InputOption::VALUE_NONE,
                 'Показать список инфоблоков с информацией о фасетном индексе'
+            )
+            ->addOption(
+                'all',
+                'a',
+                InputOption::VALUE_NONE,
+                'Пересоздать индексы для всех инфоблоков с включенным фасетным индексом'
             );
     }
 
+    /**
+     * @throws LoaderException
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
@@ -54,10 +65,10 @@ class FacetIndexRebuildCommand extends Command
             if ($iblockId) {
                 // Пересоздаём индекс для конкретного инфоблока
                 return $this->rebuildSingleIblock($io, (int)$iblockId);
-            } else {
-                // Пересоздаём индексы для всех инфоблоков
-                return $this->rebuildAllIblocks($io);
             }
+
+            return $this->rebuildAllIblocks($io);
+            // Не указан ни ID, ни --all - пересоздаём все инфоблоки (по умолчанию)
         } catch (\Throwable $e) {
             $io->error(sprintf('Ошибка: %s', $e->getMessage()));
             if ($output->isVerbose()) {
@@ -157,7 +168,7 @@ class FacetIndexRebuildCommand extends Command
         $indexer->startIndex();
         $step = 0;
         
-        while ($indexer->continueIndex(0)) {
+        while ($indexer->continueIndex()) {
             $step++;
             if ($step % 100 === 0) {
                 $io->writeln(sprintf('  Обработано шагов: %d', $step));
@@ -169,10 +180,7 @@ class FacetIndexRebuildCommand extends Command
         $elapsedTime = time() - $startTime;
 
         // Очищаем кеши
-        \CBitrixComponent::clearComponentCache("bitrix:catalog.smart.filter");
-        if (class_exists('\CIBlock')) {
-            \CIBlock::clearIblockTagCache($iblockId);
-        }
+        IblockHelper::clearCache($iblockId);
 
         $io->success(sprintf(
             'Фасетный индекс успешно пересоздан! Выполнено шагов: %d. Время выполнения: %d сек.',
@@ -247,17 +255,14 @@ class FacetIndexRebuildCommand extends Command
                 $indexer->startIndex();
                 $step = 0;
                 
-                while ($indexer->continueIndex(0)) {
+                while ($indexer->continueIndex()) {
                     $step++;
                 }
                 
                 $indexer->endIndex();
 
                 // Очищаем кеши
-                \CBitrixComponent::clearComponentCache("bitrix:catalog.smart.filter");
-                if (class_exists('\CIBlock')) {
-                    \CIBlock::clearIblockTagCache($iblock['ID']);
-                }
+                IblockHelper::clearCache($iblock['ID']);
 
                 $io->writeln(sprintf('  <info>✓ Успешно (шагов: %d)</info>', $step));
                 $processed++;
@@ -280,14 +285,14 @@ class FacetIndexRebuildCommand extends Command
                 $elapsedTime
             ));
             return self::FAILURE;
-        } else {
-            $io->success(sprintf(
-                'Все фасетные индексы успешно пересоздаты! Обработано: %d. Время выполнения: %d сек.',
-                $processed,
-                $elapsedTime
-            ));
-            return self::SUCCESS;
         }
+
+        $io->success(sprintf(
+            'Все фасетные индексы успешно пересоздаты! Обработано: %d. Время выполнения: %d сек.',
+            $processed,
+            $elapsedTime
+        ));
+        return self::SUCCESS;
     }
 }
 

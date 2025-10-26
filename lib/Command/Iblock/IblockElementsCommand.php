@@ -7,6 +7,7 @@ namespace Bxmax\Cli\Command\Iblock;
 use Bitrix\Main\ArgumentException;
 use Bitrix\Main\Loader;
 use Bitrix\Iblock\ElementTable;
+use Bitrix\Iblock\IblockTable;
 use Bitrix\Main\LoaderException;
 use Bitrix\Main\ObjectPropertyException;
 use Bitrix\Main\SystemException;
@@ -24,8 +25,26 @@ class IblockElementsCommand extends Command
     {
         $this->setName('iblock:elements')
             ->setDescription('Список элементов инфоблока')
-            ->addArgument('iblock_id', InputArgument::REQUIRED, 'ID инфоблока')
-            ->addOption('limit', 'l', InputOption::VALUE_OPTIONAL, 'Количество элементов', 20);
+            ->addArgument('id', InputArgument::REQUIRED, 'ID инфоблока')
+            ->addOption(
+                'limit',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'Количество элементов',
+                100
+            )
+            ->addOption(
+                'active',
+                null,
+                InputOption::VALUE_NONE,
+                'Показать только активные элементы'
+            )
+            ->addOption(
+                'section',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Фильтр по ID раздела'
+            );
     }
 
     /**
@@ -43,14 +62,43 @@ class IblockElementsCommand extends Command
             return self::FAILURE;
         }
 
-        $iblockId = (int)$input->getArgument('iblock_id');
+        $iblockId = (int)$input->getArgument('id');
         $limit = (int)$input->getOption('limit');
+        $activeOnly = $input->getOption('active');
+        $sectionId = $input->getOption('section');
+        $verbose = $output->isVerbose();
+        $veryVerbose = $output->isVeryVerbose();
 
-        $io->title(sprintf('Элементы инфоблока ID: %d', $iblockId));
+        // Проверяем существование инфоблока
+        $iblock = IblockTable::getById($iblockId)->fetch();
+        if (!$iblock) {
+            $io->error(sprintf('Инфоблок с ID=%d не найден', $iblockId));
+            return self::FAILURE;
+        }
+
+        $io->title(sprintf('Элементы инфоблока: %s (ID: %d)', $iblock['NAME'], $iblockId));
+
+        // Формируем фильтр
+        $filter = ['IBLOCK_ID' => $iblockId];
+        if ($activeOnly) {
+            $filter['ACTIVE'] = 'Y';
+        }
+        if ($sectionId) {
+            $filter['IBLOCK_SECTION_ID'] = (int)$sectionId;
+        }
+
+        // Формируем список полей для выборки
+        $select = ['ID', 'NAME', 'CODE', 'ACTIVE', 'SORT', 'IBLOCK_SECTION_ID'];
+        if ($verbose || $veryVerbose) {
+            $select[] = 'DATE_CREATE';
+            $select[] = 'TIMESTAMP_X';
+            $select[] = 'PREVIEW_PICTURE';
+            $select[] = 'DETAIL_PICTURE';
+        }
 
         $result = ElementTable::getList([
-            'select' => ['ID', 'NAME', 'CODE', 'ACTIVE', 'SORT'],
-            'filter' => ['IBLOCK_ID' => $iblockId],
+            'select' => $select,
+            'filter' => $filter,
             'order' => ['SORT' => 'ASC', 'ID' => 'DESC'],
             'limit' => $limit
         ]);
@@ -59,13 +107,37 @@ class IblockElementsCommand extends Command
         $count = 0;
 
         while ($element = $result->fetch()) {
-            $tableData[] = [
+            $row = [
                 $element['ID'],
-                $element['NAME'],
                 $element['CODE'] ?? '',
+                $element['NAME'],
                 $element['ACTIVE'] === 'Y' ? 'Да' : 'Нет',
+                $element['IBLOCK_SECTION_ID'] ?? '-',
                 $element['SORT'],
             ];
+
+            if ($verbose || $veryVerbose) {
+                // Подробный режим
+
+                if (isset($element['DATE_CREATE'])) {
+                    $row[] = $element['DATE_CREATE']->format('d.m.Y H:i:s');
+                } else {
+                    $row[] = '-';
+                }
+
+                if (isset($element['TIMESTAMP_X'])) {
+                    $row[] = $element['TIMESTAMP_X']->format('d.m.Y H:i:s');
+                } else {
+                    $row[] = '-';
+                }
+
+                if ($veryVerbose) {
+                    $row[] = !empty($element['PREVIEW_PICTURE']) ? 'Да' : 'Нет';
+                    $row[] = !empty($element['DETAIL_PICTURE']) ? 'Да' : 'Нет';
+                }
+            }
+
+            $tableData[] = $row;
             $count++;
         }
 
@@ -74,12 +146,37 @@ class IblockElementsCommand extends Command
             return self::SUCCESS;
         }
 
+        // Формируем заголовки таблицы
+        $headers = ['ID', 'Код', 'Название', 'Активен', 'Раздел', 'Сортировка'];
+
+        if ($verbose || $veryVerbose) {
+            $headers[] = 'Дата создания';
+            $headers[] = 'Дата изменения';
+
+            if ($veryVerbose) {
+                $headers[] = 'Превью';
+                $headers[] = 'Детально';
+            }
+        }
+
         $table = new Table($output);
-        $table->setHeaders(['ID', 'Название', 'Код', 'Активен', 'Сортировка'])
+        $table->setHeaders($headers)
               ->setRows($tableData);
         $table->render();
 
         $io->success(sprintf('Показано элементов: %d', $count));
+
+        // Выводим информацию о примененных фильтрах
+        $filters = [];
+        if ($activeOnly) {
+            $filters[] = 'только активные';
+        }
+        if ($sectionId) {
+            $filters[] = sprintf('раздел ID=%s', $sectionId);
+        }
+        if (!empty($filters)) {
+            $io->note('Применены фильтры: ' . implode(', ', $filters));
+        }
 
         return self::SUCCESS;
     }
