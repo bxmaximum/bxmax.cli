@@ -11,7 +11,7 @@ class bxmax_cli extends CModule
     public $MODULE_DESCRIPTION;
 
     public $PARTNER_NAME;
-    public $PARTNER_URI = 'https://bxmax.ru/';
+    public $PARTNER_URI;
     public $MODULE_VERSION;
     public $MODULE_VERSION_DATE;
     public $DIR;
@@ -27,6 +27,7 @@ class bxmax_cli extends CModule
         $this->MODULE_NAME = Loc::getMessage('BXMAX_CLI_MODULE_NAME');
         $this->MODULE_DESCRIPTION = Loc::getMessage('BXMAX_CLI_MODULE_DESCRIPTION');
         $this->PARTNER_NAME = Loc::getMessage('BXMAX_CLI_PARTNER_NAME');
+        $this->PARTNER_URI = 'https://bxmax.ru/';
 
         if (stripos(__FILE__, '/local/modules') !== false) {
             $this->DIR = 'local';
