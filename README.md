@@ -1,6 +1,14 @@
 # BXMax CLI - Расширенный набор консольных команд для Bitrix Framework
 
+[![Latest Stable Version](https://img.shields.io/packagist/v/bxmaximum/bxmax.cli.svg?style=flat-square)](https://packagist.org/packages/bxmaximum/bxmax.cli)
+[![Total Downloads](https://img.shields.io/packagist/dt/bxmaximum/bxmax.cli.svg?style=flat-square)](https://packagist.org/packages/bxmaximum/bxmax.cli)
+[![License](https://img.shields.io/packagist/l/bxmaximum/bxmax.cli.svg?style=flat-square)](https://packagist.org/packages/bxmaximum/bxmax.cli)
+
 Модуль предоставляет расширенный набор консольных команд для управления Bitrix Framework, вдохновленный подходами из Laravel и Symfony.
+
+- Packagist: [bxmaximum/bxmax.cli](https://packagist.org/packages/bxmaximum/bxmax.cli)
+- Документация: [https://cli.bxmax.ru/](https://cli.bxmax.ru/)
+- GitHub: [bxmaximum/bxmax.cli](https://github.com/bxmaximum/bxmax.cli)
 
 ## Основные разделы команд
 
@@ -15,15 +23,11 @@
 - **💽 База данных** - работа с базой данных
 - **💾 Резервное копирование** - создание бэкапов
 
-## 📚 Документация
-
-Полная документация со всеми доступными командами находится на сайте:
-
-**👉 [https://cli.bxmax.ru/](https://cli.bxmax.ru/)**
-
 ## Быстрый старт
 
 ### Установка через Composer
+
+Предварительно настройте Composer и консоль Битрикса: https://docs.1c-bitrix.ru/pages/get-started/composer.html
 
 Пример `composer.json` с установкой модуля в `local/modules/`:
 
@@ -43,16 +47,15 @@
 Затем:
 
 ```bash
-composer update bxmaximum/bxmax.cli
+composer require bxmaximum/bxmax.cli
 ```
 
 После установки подключите модуль в админке: «Marketplace → Установленные решения».
 
 ### Установка вручную
 
-1. Установите и настройте composer, а также консоль Битрикса по официальной документации: https://docs.1c-bitrix.ru/pages/get-started/composer.html
-2. Скачайте архив релиза с модулем в директорию `/local/modules/bxmax.cli/`
-3. Установите модуль через административную панель: "Marketplace - Установленные решения".
+1. Скачайте архив релиза с [GitHub Releases](https://github.com/bxmaximum/bxmax.cli/releases) в директорию `/local/modules/bxmax.cli/`
+2. Установите модуль через административную панель: «Marketplace → Установленные решения»
 
 ### Использование
 
@@ -97,6 +100,7 @@ php bitrix.php search:reindex
 - Bitrix Framework 25.0+
 - PHP 8.1+
 - Symfony Console Component (входит в Bitrix)
+- Composer + `composer/installers` (для установки через Packagist)
 
 ## Обратная связь и вклад в проект
 
