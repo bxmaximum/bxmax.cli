@@ -23,7 +23,32 @@
 
 ## Быстрый старт
 
-### Установка
+### Установка через Composer
+
+Пример `composer.json` с установкой модуля в `local/modules/`:
+
+```json
+{
+  "extra": {
+    "installer-paths": {
+      "local/modules/{$name}/": ["type:bitrix-module"]
+    }
+  },
+  "require": {
+    "bxmaximum/bxmax.cli": "^1.1"
+  }
+}
+```
+
+Затем:
+
+```bash
+composer update bxmaximum/bxmax.cli
+```
+
+После установки подключите модуль в админке: «Marketplace → Установленные решения».
+
+### Установка вручную
 
 1. Установите и настройте composer, а также консоль Битрикса по официальной документации: https://docs.1c-bitrix.ru/pages/get-started/composer.html
 2. Скачайте архив релиза с модулем в директорию `/local/modules/bxmax.cli/`
